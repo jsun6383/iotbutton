@@ -1,0 +1,79 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IoT -> Lambda -> Twilio
+
+Resources:
+
+  IotButtonLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Trigger twilio by IoT button
+      Code:
+        S3Bucket: 'johns-iotbutton-lambda'
+        S3Key: 'iotbutton.zip'
+      Handler: lambda_function.lambda_handler
+      MemorySize: 128
+      Role:
+        Fn::GetAtt: [ 'IotButtonLambdaExecutionRole', 'Arn' ]
+      Runtime: python2.7
+      Timeout: 20
+
+  IotButtonLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: IotButtonLambdaExecutionRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: IotButtonLambda001
+                Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                Resource: '*'
+              - Sid: IotButtonLambda002
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: 
+        Fn::GetAtt: [ 'IotButtonLambda', 'Arn' ]
+      Action: 'lambda:InvokeFunction'
+      Principal: iot.amazonaws.com
+      SourceAccount: 
+        Ref: 'AWS::AccountId'
+      SourceArn: 
+        Fn::GetAtt: [ 'MyTopicRule', 'Arn' ]
+
+  MyTopicRule: 
+    Type: "AWS::IoT::TopicRule"
+    Properties: 
+      RuleName: "MyIotButtonRule"
+      TopicRulePayload: 
+        RuleDisabled: "false"
+        Sql: >-
+          select * from 'iotbutton/G030MD04939222LX'
+        Actions: 
+          - Lambda: 
+              FunctionArn: 
+                Fn::GetAtt: [ 'IotButtonLambda', 'Arn' ]
+
+

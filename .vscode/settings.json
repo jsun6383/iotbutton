@@ -1,0 +1,9 @@
+{
+    "python.venvPath": "/Users/jsun/virtualenv/python2",
+    "python.pythonPath": "/Users/jsun/virtualenv/python2",
+    "python.linting.enabled": true,
+    "python.linting.pylintArgs": [
+        "--init-hook",
+        "import sys; sys.path.append('./lib')"
+    ]
+}
